@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <style type="text/css">
+        span.terminology { display: inline-block; color: #222; margin-right: 0.82em; }
+        span.bigger { font-size: larger; color: #135; }
+        li { margin-left: -1em; }
+        span.block, pre.block { display: inline-block; vertical-align: top; margin-right: 0.82em; }
+    </style>
+</head>
+<body style="color: #484848; font-family: sans-serif;">
+<h1>Apache CXF</h1>
+<ul>
+    <li>
+        <span class="terminology">Transports:</span>the ways to send the messages: HTTP, JMS and Local (i.e. in-JVM,
+        &#x2b46; there's a way to configure the local transport to avoid serialization).
+    </li>
+    <li>
+        <span class="terminology">Bindings:</span>map a message to a particular protocol (e.g. SOAP binding is for SOAP
+        or HTTP binding is for REST).
+    </li>
+    <li>
+        <span class="terminology">Message Interception and Modification:</span>e.g. performing authentication based on
+        headers or redirecting a message ...
+    </li>
+    <li><span class="terminology">Transmitting binary data:</span>via a standard called
+        <span class="bigger">M</span>essage <span class="bigger">T</span>ransmission
+        <span class="bigger">O</span>ptimization <span class="bigger">M</span>echanism
+    </li>
+    <li>
+        <span class="block">A simple SOAP service</span>
+        <pre class="block">@javax.jws.WebService        <i>// in JDK</i>
+public class HelloService {
+    public String sayHi(String name) {
+        return "Hell " + name;
+    }
+}
+        </pre>
+        <span class="block"><code>@javax.jws.WebMethod</code>: customize the operation name<br/>
+            <code>@javax.jws.WebParam</code>: customize the parameter name, direction (IN or OUT), ...<br/>
+            <code>@javax.jws.WebResult</code>: customize the return value of the web service call
+        </span>
+        <br/>
+        Services are published via one of 2 means: 1) the JAX-WS standard Endpoints APIs 2) CXF's xml configuration
+        format (e.g. &lt;jaxws:endpoint .../&gt;)
+    </li>
+    <li>A simple SOAP client<br/>
+        If we already have a WSDL, we can use the WSDL2Java tool (availble in the command line version or a maven
+        plugin) to generate a client.
+    </li>
+</ul>
+<h1>JPA 2.1 <span style="font-size: small">(finalized in Apr 2013, i.e. need hibernate 4.3 not yet released)</span></h1>
+<ul>
+    <li><span class="terminology">@javax.persistence.Access:</span>to specify if the JPA impl will get the data for the
+        db column directly from the field (AccessType.FIELD) or from the getter method (AccessType.PROPERTY, in this
+        case we have to put <code>@Access(AccessType.PROPERTY)</code> on the getter method
+        and <code>@Access(AccessType.FIELD)</code> on the class).
+    </li>
+    <li><span class="terminology">@Basic(fetch = FetchType.LAZY):</span>applied for Java primitive types or their
+        wrappers but not for collections.</li>
+    <li>
+        <pre class="block">@Entity
+public class Employee {
+    @Id private int id;
+    @Enumerated(EnumType.STRING) private EmployeeType type;
+    ...</pre><span class="block">EnumType.STRING stores the value of this enum field as a string, where EnumType.ORDINAL
+       will store the value as the order number of that field in the enum.</span>
+    </li>
+    <li><span class="terminology">@Temporal(TemporalType.DATE):</span>used for Date, Time and Timestamp.</li>
+    <li>
+        <pre class="block">@Entity
+public class Employee {
+    @Id private int id;
+    @ManyToOne @JoinColumn(name = "DEPT_ID")
+    private Department department;</pre>
+        <pre class="block">@Entity
+public class Department {
+    @Id private int id;
+    @OneToMany(mappedBy = "department")
+    <i>// @OrderColumn(name = "EMP_NAME") if used, we should use List&lt;Employee&gt; employee</i>
+    private Collection&lt;Employee&gt; employees;</pre>
+    </li>
+    <li>
+        <pre class="block">@Entity
+public class Employee {
+    @Id private int id;
+    @OneToOne @JoinColumn(name = "PSPACE_ID", fetch = FetchType.LAZY)
+    private ParkingSpace parkingSpace;</pre>
+        <pre class="block">@Entity
+public class ParkingSpace {
+    @Id private int id;
+    @OneToOne(mappedBy = "parkingSpace") private Employee employee;</pre>
+    </li>
+    <li>
+        <pre class="block">@Entity
+public class Employee {
+    @Id private int id;
+    <i>// @JoinTable is optional &amp; used with @ManyToX</i>
+    @JoinTable(name = "EMP_PROJ", joinColumns = @JoinColumn(name = "EMP_ID"),
+               inverseJoinColumn = @JoinColumn(name = "PROJ_ID"))
+    @ManyToMany private Collection&lt;Project&gt; projects;</pre>
+        <pre class="block">@Entity
+public class ParkingSpace {
+    @Id private int id;
+    @ManyToMany(mappedBy = "projects")
+    private Collection&lt;Employee&gt; employees;</pre>
+        <br/>
+        We can use <code>@JoinTable</code> for a one-to-many relationship if we want to put the relationship in a
+        separate table.
+    </li>
+    <li>
+        <pre class="block">@Embeddable
+public class Address {
+    private String street;
+    private String state;
+    @Column(name = "ZIP_CODE") private String zip;</pre>
+        <pre class="block">@Entity
+public class Employee {
+    @Id private int id;
+    <i>// @AttributeOverrides: optional &amp; helpful when an embeddable class is used in different entities</i>
+    @AttributeOverrides({
+        @AttributeOverride(name = "state", column = @Column(name = "PROVINCE")),
+        @AttributeOverride(name = "zip", column = @Column(name = "Z_CODE")),
+    })
+    @Embedded private Address address;</pre>
+    </li>
+    <li><span class="terminology">@IdClass:</span>to specify a compound primary key.</li>
+    <li><span class="terminology">Derived Identifiers:</span>an identifier in one entity includes a foreign key to
+        another entity (this also covers the "Shared Primary Key" case).
+    </li>
+    <li>
+        <span class="terminology">@Inheritance &amp; @MappedSuperclass</span><br/>
+        <pre class="block">
+             +-----------------------+
+             |   <i>abstract Employee</i>   |
+             +-----------------------+
+             | id: int               |
+             | name: String          |
+             +-----------------------+
+                         &#9651;
+                         |
+        +----------------+-----------------+
+        |                                  |
++------------------+          +--------------------------+
+| ContractEmployee |          | <i>abstract CompanyEmployee</i> |
++------------------+          +--------------------------+
+| dailyRate: int   |          | vacation: int            |
++------------------+          +--------------------------+
+                                           &#9651;
+                                           |
+                          +----------------+-----------------+
+                          |                                  |
+                +------------------+               +------------------+
+                | PartTimeEmployee |               | FullTimeEmployee |
+                +------------------+               +------------------+
+                | hourlyRate: int  |               | salary: long     |
+                +------------------+               +------------------+
+
+        </pre>
+        <span class="block">
+            <pre>@Entity  <i>// this is the root entity</i>
+public abstract class Employee { ... }</pre>
+            <pre>@Entity
+public class ContractEmployee extends Employee { ... }</pre>
+            <pre>@MappedSuperclass
+public abstract class CompanyEmployee extends Employee { ... }</pre>
+            <pre>@Entity
+public class FullTimeEmployee extends CompanyEmployee { ... }</pre>
+            <pre>@Entity
+public class PartTimeEmployee extends CompanyEmployee { ... }</pre>
+        </span>
+        <br/>
+        <ul>
+            <li>
+                <span class="terminology">Single-Table strategy:</span>put <code>@Inheritance(strategy =
+                InheritanceType.SINGLE_TABLE)</code> on the root entity. So there must be a discriminator column of
+                INTEGER, STRING or CHAR types. <code>@DiscriminatorColumn(name = "EMP_TYPE")</code> is on the root
+                entity and <code>@DiscriminatorValue(...)</code> is on other entities.
+            </li>
+            <li>
+                <span class="terminology">Joined strategy:</span>
+                <pre>
++----------------+  +--------------------+  +--------------------+  +--------------------+
+|    Employee    |  |  ContractEmployee  |  |  PartTimeEmployee  |  |  FullTimeEmployee  |
++----------------+  +--------------------+  +--------------------+  +--------------------+
+| PK id          |  | PK, FK1 id         |  | PK, FK1 id         |  | PK, FK1 id         |
++----------------+  +--------------------+  +--------------------+  +--------------------+
+| common columns |  | additional columns |  | additional columns |  | additional columns |
++----------------+  |    for contract    |  |   for part-time    |  |   for full-time    |
+                    |      employee      |  |     employee       |  |     employee       |
+                    +--------------------+  +--------------------+  +--------------------+
+                </pre>
+                Put <code>@Inheritance(strategy=InheritanceType.JOINED)</code> and
+                <code>@DiscriminatorColumn(name="EMP_TYPE", discriminatorType=DiscriminatorType.INTEGER)</code> on the
+                root entity. And <code>@DiscriminatorValue(...)</code> on other entities.
+            </li>
+            <li>
+                <span class="terminology">Table-per-Concrete-Class strategy</span>that means no <code>@Table</code> the
+                root entity but on ContractEmployee, PartTimeEmployee and FullTimeEmployee
+            </li>
+        </ul>
+    </li>
+</ul>
+<h1>Spring Data</h1>
+<ul>
+    <li>
+        Provides a familiar, consistent layer above Big Data (e.g. Hadoop), NoSQL (e.g. Redis, Mongo), RDBMS (e.g. JPA,
+        JDBC extensions) ... while retaining data store specific features and capabilities.
+        <ul>
+            <li><span class="terminology">familiar</span>: Spring Template pattern like RedisTemplate, MongoTemplate ...
+            </li>
+            <li><span class="terminology">Spring Data Repository model</span>: is the data access layer, provides common
+                CRUD functionality across data stores.</li>
+            <li>Integration with <span class="terminology">QueryDSL</span>: QueryDSL enables the construction of
+                type-safe SQL-like queries for multiple backends like JPA, JDP, MongoDB, SQL and plain collections in
+                Java.</li>
+        </ul>
+    </li>
+    <li></li>
+</ul>
+</body>
+</html>

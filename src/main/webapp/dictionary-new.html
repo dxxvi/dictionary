@@ -1,0 +1,299 @@
+<!doctype html>
+<html xmlns:ng="http://angularjs.org">
+<head>
+    <script src="audio.min.js"></script>
+    <link rel="stylesheet" href="alertify.core.css" />
+    <link rel="stylesheet" href="alertify.default.css" />
+    <script src="alertify.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.2.1/angular.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="wordListMap.js"></script>
+    <script type="text/javascript">
+        var correctAudios = {
+            array: [],
+            add: function(newSound) {
+                this.array.push(newSound);
+                return this;
+            },
+            play: function() {
+                this.array[Math.floor(Math.random() * this.array.length)].click();
+            }
+        };
+
+        function Controller($scope, $http, $timeout) {
+            $scope.isLoadingSound = true;
+
+            $scope.wordData = [];
+
+            $scope.tabs = [ {title: "Home", active: true} ];
+
+            $scope.wordListMap = {};
+            for (var key in wordListMap) {
+                $scope.tabs.push({title: key, active: false});
+
+                var array = [];
+                var n = wordListMap[key].length;
+                for (var i = 0; i < n; i++) {
+                    array.push({word: wordListMap[key][i], input: "", answer: ""});
+                }
+                $scope.wordListMap[key] = array;
+            }
+
+            $http({
+                method: "POST",
+                url: "/dictionary/services/receive-word-list-map?" + encodeObject(wordListMap)
+            })
+                    .success(function (data, status, headers, config) {
+                        $scope.isLoadingSound = false;
+
+                        if (data.message) {
+                            alertify.log(data.message);
+                        }
+                        if (data.error) {
+                            alertify.error(data.error, "", 0);
+                        }
+
+                        $("td[in-tab][word]").each(function() {
+                            $(this).append("<audio src='" + $(this).attr("word") + ".mp3'/>");
+                        });
+
+                        audiojs.events.ready(function() {
+                            var as = audiojs.createAll();
+
+                            // prepare the "correct", "try again", "lovely" ...
+                            correctAudios.add($("audio[src='correct.mp3']").siblings("div").find("p.play"))
+                                    .add($("audio[src='lovely.mp3']").siblings("div").find("p.play"))
+                                    .add($("audio[src='beautiful.mp3']").siblings("div").find("p.play"))
+                                    .add($("audio[src='yes.mp3']").siblings("div").find("p.play"));
+                            if (tryAudio == null) {
+                                tryAudio = $("audio[src='try.mp3']").siblings("div").find("p.play");
+                            }
+                            if (againAudio == null) {
+                                againAudio = $("audio[src='again.mp3']").siblings("div").find("p.play");
+                            }
+                        });
+                    });
+
+            $scope.check = function (wordDatum, input) {
+                if (wordDatum.word.toLowerCase() === $.trim(input).toLowerCase()) {
+                    wordDatum.answer = true;
+                    $scope.playCorrects();
+                }
+                else {
+                    wordDatum.answer = false;
+                    $scope.playTryAgain();
+                }
+            };
+
+            $scope.playCorrects = function() {
+                correctAudios.play();
+            };
+            $scope.playTryAgain = function() {
+                tryAudio.click();
+                $timeout(function() { againAudio.click(); }, 719);
+            };
+
+            $scope.setCssClassForTab = function(active) {
+                return active ? "active-tab" : "inactive-tab";
+            };
+
+            $scope.clickOnTab = function(tab) {
+                if (tab.active) {      // clicking on an active tab does nothing
+                    return;
+                }
+                for (i = 0; i < $scope.tabs.length; i++) {
+                    $scope.tabs[i].active = $scope.tabs[i].title == tab.title;
+                }
+            };
+
+            $scope.problems = [];
+
+            for (i = 0; i < 100; i++) {
+                $scope.problems.push(createEmptyProblem());
+            }
+
+            $scope.generateNewProblems = function() {
+                var n = $scope.problems.length;
+                for (var i = 0; i < n; i++) {
+                    var problem = $scope.problems[i];
+                    problem.n1 = Math.floor(Math.random() * 9) + 1;
+                    problem.n2 = Math.floor(Math.random() * 9) + 1;
+                    problem.result = problem.n1 * problem.n2;
+                    problem.answer = null;
+                    problem.correct = null;
+
+                    problem.multiplication = Math.random() < 0.4;
+                    if (!problem.multiplication) {
+                        var temp = problem.n1;
+                        problem.n1 = problem.result;
+                        problem.result = temp;
+                    }
+                }
+            };
+
+            $scope.checkAnswer = function(problem) {
+                problem.correct = ("" + problem.answer == "" + problem.result);
+            };
+
+            $scope.test = function() {
+                console.log(JSON.stringify($scope.wordListMap));
+            };
+        }
+
+        angular.module("filters", [])
+                .filter("checkmark", function () {
+                    return function (input) {
+                        if (input == "good" || input == true) {
+                            return "\u2713";
+                        }
+                        if (input == "wrong" || input == false) {
+                            return "\u2718";
+                        }
+                        return input;
+                    };
+                })
+                .filter("multiplication", function() {
+                    return function(multiplication) {
+                        if (multiplication) {
+                            return "\u00d7";
+                        }
+                        return "\u00f7";
+                    };
+                });
+        angular.module("myApp", ["filters"]);
+
+        var tryAudio = null, againAudio = null;
+
+        function encodeObject(object) {
+            var s = [];
+            var firstParameter = true;
+            for (var key in object) {
+                if (firstParameter) {
+                    firstParameter = false;
+                }
+                else {
+                    s.push("&");
+                }
+                var value = object[key];
+                if (typeof value == "string" || $.isNumeric(value)) {
+                    s.push(encodeURIComponent(key));
+                    s.push("=");
+                    s.push(encodeURIComponent(value));
+                }
+                else if ($.isArray(value)) {
+                    for (var i = 0; i < value.length; i++) {
+                        s.push(encodeURIComponent(key));
+                        s.push("=");
+                        s.push(encodeURIComponent(value[i]));
+                        if (i < value.length - 1) {
+                            s.push("&");
+                        }
+                    }
+                }
+                else {
+                    s.push(encodeURIComponent(key));
+                    s.push("=");
+                    s.push(JSON.stringify(value));
+                }
+            }
+            return s.join("");
+        }
+
+        function createEmptyProblem() {
+            return { n1: 1, n2: 1, result: 1, answer: null, multiplication: true, correct: null};
+        }
+    </script>
+    <style type="text/css">
+        body { color: #444; line-height: 4em; }
+
+        td > input[type="text"] { font-size: 1.82em; font-weight: lighter; padding-left: 0.5em; }
+
+        table.word td { padding: 0.5em 0 0.5em 2em; }
+
+        .classtrue { color: #0d0; }
+
+        .classfalse { color: red; }
+
+        span.button { font-size: 1.41em; font-weight: lighter; }
+
+        .audiojs { width: 38px; }
+
+        #id1 { position: relative; }
+        #id1 .audiojs { float: left; margin-right: 0.5em; box-shadow: none; }
+
+        div.empty-tab { border-bottom: 2px solid #999; min-width: 1em; }
+        div.empty-tab:before { content: "_"; opacity: 0; }
+        div.tab { padding-left: 1em; padding-right: 1em; }
+        div.active-tab {
+            border: 2px solid #999; border-bottom-width: 0;
+            border-top-left-radius: 0.5em; border-top-right-radius: 0.5em;
+            background: -moz-linear-gradient(top, #9af, #def);
+        }
+        div.inactive-tab { border-bottom: 2px solid #aaa; cursor: pointer; color: #666; }
+
+        table.tab td { padding: 0; }
+    </style>
+</head>
+<body id="ng-app" ng-app="myApp" ng-controller="Controller">
+
+<table style="width: 100%; line-height: 1.82em; border-collapse: collapse;">
+    <tr><td style="padding: 0;">
+        <table class="tab" style="width: 100%; border-collapse: collapse; border-spacing: 0;" border="0">
+            <tr>
+                <td><div class="empty-tab"></div></td>
+                <td ng-repeat="tab in tabs" style="white-space: nowrap;">
+                    <div class="tab" ng-class="setCssClassForTab(tab.active)" ng-click="clickOnTab(tab)">
+                        {{tab.title}}
+                    </div>
+                </td>
+                <td style="width: 99%;"><div class="empty-tab"></div></td>
+            </tr>
+        </table>
+    </td></tr>
+    <tr ng-repeat="tab in tabs" ng-show="tab.active">
+        <td style="padding-left: 2em; background: -moz-linear-gradient(top, #def, white);" ng-switch on="tab.title">
+            <div ng-switch-when="Home">
+                <img src="loading.png" ng-show="isLoadingSound"/>
+                <span ng-show="isLoadingSound">&nbsp;&nbsp;&nbsp;&nbsp;Please wait while we're loading sounds.</span>
+                <ul style="font-family: sans-serif; padding-left: 0;">
+                    <li ng-repeat="problem in problems"
+                        style="display: inline-block; font-size: 1.82em; margin-bottom: 0.8em; margin-right: 1em;">
+                        {{problem.n1}}
+                        <span>{{problem.multiplication | multiplication}}</span>
+                        {{problem.n2}}
+                        =
+                        <input type="text" ng-model="problem.answer" size="2" style="font-size: 0.82em;"/>
+                        <input type="button" ng-click="checkAnswer(problem)" value="check"/>
+                        <span ng-class="'class' + problem.correct">{{problem.correct | checkmark}}</span>
+                    </li>
+                </ul>
+            </div>
+            <table class="word" ng-switch-default>
+                <tr ng-repeat="word in wordListMap[tab.title]">
+                    <td in-tab="{{tab.title}}" word="{{word.word}}"></td>
+                    <td><input type="text" ng-model="word.input"/></td>
+                    <td>
+                        <button ng-click="check(word, word.input)"><span class="button">Check</span></button>
+                    </td>
+                    <td style="font-weight: lighter; font-size: 1.82em;" ng-class="'class' + word.answer">{{word.answer | checkmark}}</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<div id="id1">
+    <audio src="try.mp3"></audio>
+    <audio src="again.mp3"></audio>
+    <audio src="correct.mp3"></audio>
+    <audio src="lovely.mp3"></audio>
+    <audio src="beautiful.mp3"></audio>
+    <audio src="yes.mp3"></audio>
+    <div style="clear: both;"></div>
+    <div style="background: white; opacity: 0.99; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+</div>
+
+<button ng-click="generateNewProblems()">Generate new exercises</button>
+
+</body>
+</html>
