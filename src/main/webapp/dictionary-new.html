@@ -9,6 +9,20 @@
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
     <script src="wordListMap.js"></script>
     <script type="text/javascript">
+        // shuffle the words
+        (function() {
+            $.each(wordListMap, function(key, array) {
+                var i = array.length, randomIndex, temp;
+                while (i != 0) {
+                    randomIndex = Math.floor(Math.random() * i--);
+                    temp = array[randomIndex];
+                    array[randomIndex] = array[i];
+                    array[i] = temp;
+                }
+            });
+        })();
+    </script>
+    <script type="text/javascript">
         var correctAudios = {
             array: [],
             add: function(newSound) {
@@ -41,7 +55,9 @@
 
             $http({
                 method: "POST",
-                url: "/dictionary/services/receive-word-list-map?" + encodeObject(wordListMap)
+                url: "/dictionary/services/receive-word-list-map",
+                data: JSON.stringify(wordListMap),
+                responseType: "json"
             })
                     .success(function (data, status, headers, config) {
                         $scope.isLoadingSound = false;
@@ -130,6 +146,8 @@
                     }
                 }
             };
+
+            $scope.generateNewProblems();
 
             $scope.checkAnswer = function(problem) {
                 problem.correct = ("" + problem.answer == "" + problem.result);

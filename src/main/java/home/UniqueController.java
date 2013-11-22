@@ -6,8 +6,11 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -117,9 +120,11 @@ public class UniqueController {
     }
 */
 
-    @RequestMapping(value = "/receive-word-list-map", method = RequestMethod.POST)
+    @RequestMapping(value = "/receive-word-list-map", method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public Map<String, String> receiveWordListMapFromBrowser(HttpServletRequest request) {
+    public Map<String, String> receiveWordListMapFromBrowser(@RequestBody MultiValueMap<String, String> requestBody,
+                                                             HttpServletRequest request) {
         Map<String, String> result = new LinkedHashMap<>();
         StringBuilder unknownWords = new StringBuilder();
         for (Map.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
