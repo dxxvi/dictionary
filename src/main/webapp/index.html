@@ -18,7 +18,7 @@
                     url: "services/rename",
                     params: {
                         directory: $scope.directory, separator: $scope.separator,
-                        readingX1: $scope.readingX1, readingX2: $scope.readingX2,
+                        readingX1: $scope.readingX1, readingX2: $scope.readingX2, readingX3: $scope.readingX3,
                         readingY1: $scope.readingY1, readingY2: $scope.readingY2,
                         quizX1: $scope.quizX1, quizX2: $scope.quizX2, quizY1: $scope.quizY1, quizY2: $scope.quizY2
                     }
@@ -47,14 +47,14 @@
     <input type="text" ng-model="directory" size="80" style="margin-right: 1em;"/><br/>
 
     <pre style="font-family: monospace; line-height: 1em; display: inline-block;">
-           x<sub>1</sub>: <input type="text" class="monospace" ng-model="readingX1" size="4"/>           x<sub>2</sub>: <input type="text" class="monospace" ng-model="readingX2" size="4"/>
-           |                   |
-y<sub>1</sub>: <input type="text" class="monospace" ng-model="readingY1" size="4"/> --+-------------------+---
-           |                   |
-           |     reading       |
-           |                   |
-y<sub>2</sub>: <input type="text" class="monospace" ng-model="readingY2" size="4"/> --+-------------------+---
-           |                   |
+           x<sub>1</sub>: <input type="text" class="monospace" ng-model="readingX1" size="4"/>           x<sub>2</sub>: <input type="text" class="monospace" ng-model="readingX2" size="4"/>  x<sub>3</sub>: <input type="text" class="monospace" ng-model="readingX3" size="4"/>
+           |                   |         |
+y<sub>1</sub>: <input type="text" class="monospace" ng-model="readingY1" size="4"/> --+-------------------+---------+---
+           |                   |   back  |
+           |     reading       |    &amp;    |
+           |                   |   prev  |
+y<sub>2</sub>: <input type="text" class="monospace" ng-model="readingY2" size="4"/> --+-------------------+---------+---
+           |                   |         |
     </pre>
     <pre style="font-family: monospace; line-height: 1em; display: inline-block; margin-left: 3em;">
            x<sub>1</sub>: <input type="text" class="monospace" ng-model="quizX1" size="4"/>           x<sub>2</sub>: <input type="text" class="monospace" ng-model="quizX2" size="4"/>

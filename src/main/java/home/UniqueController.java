@@ -1,5 +1,7 @@
 package home;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import home.repository.EmployeeRepository;
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
@@ -34,6 +36,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -52,82 +55,18 @@ public class UniqueController {
     public static final Set<String> internalWords =
             new TreeSet<>(Arrays.asList("correct", "lovely", "beautiful", "yes", "try", "again"));
 
-/*
-    @Inject
-    private EmployeeRepository employeeRepository;
-*/
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /*
-     * Use wget to download from a url
-     */
-/*
-    @RequestMapping(value = "/upload", method = RequestMethod.GET)
+    @RequestMapping(value = "/receive-word-list-map", method = RequestMethod.POST)
     @ResponseBody
-    public Map<String, String> upload(@RequestParam String word, @RequestParam String url) {
-        Map<String, String> result = new HashMap<>();
-        url = "wget -O /dev/shm/" + word + ".mp3 " + url;
-//        System.out.printf("%s - %s\n", word, url);
-        try {
-            Runtime.getRuntime().exec(url);
-        }
-        catch (Throwable throwable) {
-            System.err.println(throwable.getMessage());
-        }
-        result.put("message", "done");
-        return result;
-    }
-
-    @RequestMapping(value = "/words", method = RequestMethod.POST)
-    @ResponseBody
-    public Map<String, String> words(@RequestParam String words) {
-        Map<String, String> result = new LinkedHashMap<>();
-        String[] wordArray = words.split("[ \n][ \n]*");
-        if (wordArray.length == 0) {
-            result.put("message", "didn't receive any word from you");
-        }
-        else {
-            List<String> internalAndExternalWords = new LinkedList<>();
-            internalAndExternalWords.addAll(Arrays.asList(wordArray));
-            internalAndExternalWords.addAll(internalWords);
-
-            StringBuilder sb = new StringBuilder();
-            for (String word : internalAndExternalWords) {
-                word = word.toLowerCase();
-                boolean audioFound = false;
-                try {
-                    byte[] sound = fetchWordSound(word);
-                    if (sound != null) {
-                        soundDictionary.put(word, sound);
-                        audioFound = true;
-                    }
-                }
-                catch (Throwable throwable) {
-                    System.err.printf("[ERROR] %s: %s\n", word, throwable.getMessage());
-                }
-
-                if (!audioFound) {
-                    sb.append(word).append(' ');
-                }
-            }
-            if (sb.length() == 0) {
-                result.put("message", "done");
-            }
-            else {
-                result.put("error", "didn't find audio for " + sb.toString());
-            }
-        }
-        return result;
-    }
-*/
-
-    @RequestMapping(value = "/receive-word-list-map", method = RequestMethod.POST,
-            produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public Map<String, String> receiveWordListMapFromBrowser(@RequestBody MultiValueMap<String, String> requestBody,
-                                                             HttpServletRequest request) {
+    public Map<String, String> receiveWordListMapFromBrowser(@RequestBody String requestBody) throws IOException {
         Map<String, String> result = new LinkedHashMap<>();
         StringBuilder unknownWords = new StringBuilder();
-        for (Map.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
+
+        TypeReference typeReference = new TypeReference<Map<String, String[]>>() {};
+        Map<String, String[]> map = objectMapper.readValue(requestBody, typeReference);
+
+        for (Map.Entry<String, String[]> entry : map.entrySet()) {
             for (String word : entry.getValue()) {
                 if (soundDictionary.get(word) == null) {
                     try {
@@ -184,20 +123,6 @@ public class UniqueController {
         return result;
     }
 
-/*
-    @RequestMapping(value = "/all-words", method = RequestMethod.GET)
-    @ResponseBody
-    public Set<String> allWords() {
-        final Set<String> result = new HashSet<>();
-        for (String word : soundDictionary.keySet()) {
-            if (!internalWords.contains(word)) {
-                result.add(word);
-            }
-        }
-        return result;
-    }
-*/
-
     /*
      * screenshots captured from raz kids are renamed and cropped
      */
@@ -205,10 +130,13 @@ public class UniqueController {
     @ResponseBody
     public Map<String, String> rename(@RequestParam String directory, @RequestParam String separator,
                                       @RequestParam int readingX1, @RequestParam int readingX2,
+                                      @RequestParam int readingX3,
                                       @RequestParam int readingY1, @RequestParam int readingY2,
                                       @RequestParam int quizX1, @RequestParam int quizX2,
                                       @RequestParam int quizY1, @RequestParam int quizY2) {
         final Map<String, String> result = new HashMap<>();
+        final String backPrevImg = "back-prev.png";
+        final String tmpImg = "tmp.png";
 
         if (!separator.endsWith(".png")) {
             separator += ".png";
@@ -250,6 +178,13 @@ public class UniqueController {
                     sb.append(String.format("\nconvert -crop %dx%d+%d+%d %s %s",
                             readingX2 - readingX1, readingY2 - readingY1, readingX1, readingY1,
                             destinationName, croppedDestinationName));
+                    sb.append("\nrm -f ").append(backPrevImg);
+                    sb.append(String.format("\nconvert -crop %dx%d+%d+%d %s %s",
+                            readingX3 - readingX2, readingY2 - readingY1, readingX2, readingY1,
+                            destinationName, backPrevImg));
+                    sb.append(String.format("\ncomposite -geometry +%d+%d %s %s %s",
+                            2*readingX2 - readingX1 - readingX3 - 4, 0, backPrevImg, croppedDestinationName, tmpImg));
+                    sb.append(String.format("\nmv %s %s", tmpImg, croppedDestinationName));
                 }
                 else {
                     sb.append(String.format("\nconvert -crop %dx%d+%d+%d %s %s",
@@ -257,10 +192,11 @@ public class UniqueController {
                             destinationName, croppedDestinationName));
                 }
                 sb.append(String.format("\nmv %s %s", croppedDestinationName, destinationName));
+                sb.append(String.format("\nnice -n 19 optipng -o3 %s", destinationName));
                 i++;
             }
             sb.insert(0, "cd \"" + parent + "\"");
-            Path test = Paths.get("/dev/shm/test.sh");
+            Path test = Paths.get("/dev/shm/test" + new Date().getTime() + ".sh");
             if (test.toFile().exists()) {
                 test.toFile().delete();
             }
@@ -277,9 +213,11 @@ public class UniqueController {
                 result.put("error", ioex.getMessage());
             }
 
+/*
             if (fileCreated) {
                 Runtime.getRuntime().exec(test.toString());
             }
+*/
 
             result.put("message", "done");
         }

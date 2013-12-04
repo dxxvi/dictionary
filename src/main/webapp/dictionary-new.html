@@ -55,8 +55,8 @@
 
             $http({
                 method: "POST",
-                url: "/dictionary/services/receive-word-list-map",
-                data: JSON.stringify(wordListMap),
+                url: "/dictionary/services/receive-word-list-map.json",
+                data: wordListMap,
                 responseType: "json"
             })
                     .success(function (data, status, headers, config) {
@@ -181,41 +181,6 @@
         angular.module("myApp", ["filters"]);
 
         var tryAudio = null, againAudio = null;
-
-        function encodeObject(object) {
-            var s = [];
-            var firstParameter = true;
-            for (var key in object) {
-                if (firstParameter) {
-                    firstParameter = false;
-                }
-                else {
-                    s.push("&");
-                }
-                var value = object[key];
-                if (typeof value == "string" || $.isNumeric(value)) {
-                    s.push(encodeURIComponent(key));
-                    s.push("=");
-                    s.push(encodeURIComponent(value));
-                }
-                else if ($.isArray(value)) {
-                    for (var i = 0; i < value.length; i++) {
-                        s.push(encodeURIComponent(key));
-                        s.push("=");
-                        s.push(encodeURIComponent(value[i]));
-                        if (i < value.length - 1) {
-                            s.push("&");
-                        }
-                    }
-                }
-                else {
-                    s.push(encodeURIComponent(key));
-                    s.push("=");
-                    s.push(JSON.stringify(value));
-                }
-            }
-            return s.join("");
-        }
 
         function createEmptyProblem() {
             return { n1: 1, n2: 1, result: 1, answer: null, multiplication: true, correct: null};
