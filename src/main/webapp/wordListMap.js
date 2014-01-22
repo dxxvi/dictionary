@@ -1,6 +1,3 @@
-/**
- * Created by ly on 10/8/13.
- */
 var wordListMap = {
     "Sep 30 - Oct 4": ["lunch", "ugly", "cover", "trunk", "sponge", "stuff", "bunch", "dull", "month",
         "bucket", "trust", "uncle", "cuff", "summit", "hunter", "button"],
@@ -15,5 +12,13 @@ var wordListMap = {
     "Nov 11 - 15": ["aid", "pay", "chain", "mail", "tray", "paint", "maybe", "plain", "lay", "main", "always", "pail",
         "laid", "away", "paid"],
     "Nov 18 - 22": ["sleeping", "dream", "scream", "peanut", "treat", "peacock", "peace", "greet", "cheese", "leave",
-        "steam", "sweet", "reason", "degree", "beetle"]
+        "steam", "sweet", "reason", "degree", "beetle"],
+    "Dec 2 - 6": ["wildcat", "rewind", "find", "nightmare", "wild", "highlight", "blind", "fight", "sight", "grind",
+        "title", "knight", "slight", "might", "sigh", "libraries"],
+    "Dec 16 - 20": ["broke", "smile", "close", "state", "always", "chain", "laid", "maybe", "real", "teacher", "street",
+        "wheels", "bright", "mild", "kind", "right", "almost", "snow", "float", "window"],
+    "Jan 6 - 10": ["shape", "shipwreck", "scratches", "seashore", "wrap", "hatch", "depth", "sharp", "chance", 
+        "wrinkle", "catch", "chase", "shower", "thick", "wrote", "chuckle"],
+    "Jan 13 - 17": ["pounce", "fence", "space", "plunge", "center", "nudge", "cider", "price", "page", "cedar", "piece",
+        "pencil", "slice", "engine", "cellar", "bridge"]
 };
